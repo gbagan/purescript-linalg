@@ -5,7 +5,7 @@ module LinearAlgebra.Vector
   , sum
   , diff
   , dot
-  , mult
+  , multBy
   , opposite
   )
   where
@@ -14,6 +14,12 @@ import Prelude
 import Data.Array (foldl, length, zipWith)
 
 data Vector a = Vector (Array a) | Invalid
+derive instance Eq a => Eq (Vector a)
+derive instance Functor Vector
+
+instance Show a => Show (Vector a) where
+    show Invalid = "Invalid vector"
+    show (Vector v) = "(Vatrix " <> show v <> ")" 
 
 fromArray :: forall a. Array a -> Vector a
 fromArray = Vector
@@ -36,9 +42,9 @@ dot (Vector v1) (Vector v2)
     | length v1 == length v2 = foldl (+) zero $ zipWith (*) v1 v2
 dot _ _ = zero
 
-mult :: forall a. Semiring a => a -> Vector a -> Vector a
-mult a (Vector v) = Vector $ map (_ * a) v
-mult _ _ = Invalid
+multBy :: forall a. Semiring a => a -> Vector a -> Vector a
+multBy a (Vector v) = Vector $ map (_ * a) v
+multBy _ _ = Invalid
 
 opposite :: forall a. Ring a => Vector a -> Vector a
 opposite (Vector v) = Vector $ map (zero - _) v
