@@ -3,6 +3,8 @@ module LinearAlgebra.Matrix
   , fromArray
   , fromFunction
   , invalid
+  , isValid
+  , identity
   , ncols
   , nrows
   , elem
@@ -10,7 +12,8 @@ module LinearAlgebra.Matrix
   , mapWithIndex
   , row
   , column
-  , identity
+  , rows
+  , columns
   , transpose
   , sum
   , diff
@@ -19,14 +22,17 @@ module LinearAlgebra.Matrix
   , inverse
   , gaussJordan
   , determinant
+  , image
+  , kernel
   )
   where
 
 import Prelude
-import Data.Array ((..), (!!), all, find, foldl, length, null, uncons)
+import Data.Array ((..), (!!), all, filter, find, foldl, length, null, uncons, zipWith)
 import Data.Array as Array
 import Data.Traversable (traverse)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, fromJust)
+import Partial.Unsafe (unsafePartial)
 import LinearAlgebra.Vector as V
 
 data Matrix a = Matrix Int Int (Array (Array a)) | Invalid
@@ -53,6 +59,10 @@ fromArray m = case uncons m of
 invalid :: forall a. Matrix a
 invalid = Invalid
 
+isValid :: forall a. Matrix a -> Boolean
+isValid (Matrix _ _ _) = true
+isValid _ = false
+
 nrows :: forall a. Matrix a -> Int
 nrows (Matrix r _ _) = r
 nrows _ = 0
@@ -63,6 +73,9 @@ ncols _ = 0
 
 elem :: forall a. Semiring a => Int -> Int -> Matrix a -> a
 elem i j m = fromMaybe zero $ elem' i j m
+
+unsafeElem :: forall a. Int -> Int -> Matrix a -> a
+unsafeElem i j m = unsafePartial $ fromJust $ elem' i j m
 
 elem' :: forall a. Int -> Int -> Matrix a -> Maybe a
 elem' i j (Matrix _ _ m) = m !! i >>= (_ !! j)
@@ -80,11 +93,18 @@ column :: forall a. Int -> Matrix a -> V.Vector a
 column j m@(Matrix r _ _) = fromMaybe V.invalid $ V.fromArray <$> traverse (\i -> elem' i j m) (0..(r-1))
 column _ _ = V.invalid       
 
+rows :: forall a. Matrix a -> Array (V.Vector a)
+rows (Matrix _ _ m) = V.fromArray <$> m
+rows Invalid = []
+
+columns :: forall a. Matrix a -> Array (V.Vector a)
+columns = rows <<< transpose
+
 identity :: forall a. Field a => Int -> Matrix a
 identity n = fromFunction n n \i j -> if i == j then one else zero
 
-transpose :: forall a. Semiring a => Matrix a -> Matrix a
-transpose m@(Matrix r c _) = fromFunction c r \i j -> elem j i m
+transpose :: forall a. Matrix a -> Matrix a
+transpose m@(Matrix r c _) = fromFunction c r \i j -> unsafeElem j i m
 transpose _ = Invalid
 
 sum :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
@@ -128,6 +148,13 @@ gaussJordan m@(Matrix r c _) = {echelon: res.mat, det: res.det} where
                | otherwise = []
 gaussJordan _ = {echelon: Invalid, det: zero}
 
+augmentedMatrix :: forall a. Semiring a => Matrix a -> Matrix a
+augmentedMatrix m@(Matrix r c _) = fromFunction r (r + c) fAug where
+    fAug i j | j < c = elem i j m
+             | i == j - c = one
+             | otherwise = zero
+augmentedMatrix _ = Invalid
+
 inverse :: forall a. Eq a => Field a => Matrix a -> Matrix a
 inverse m@(Matrix r c _) | r == c =
     if (0..(r-1)) # all \i -> elem i i echelon == one then
@@ -135,12 +162,28 @@ inverse m@(Matrix r c _) | r == c =
     else
         Invalid
     where
-    augmented = fromFunction r (2 * r) fAug
-    fAug i j | j < r = elem i j m
-             | i == j - r = one
-             | otherwise = zero
-    echelon = (gaussJordan augmented).echelon
+    echelon = (gaussJordan $ augmentedMatrix m).echelon
 inverse _ = Invalid
 
 determinant :: forall a. Eq a => Field a => Matrix a -> a
 determinant = _.det <<< gaussJordan
+
+filterWithIndex :: forall a. (Int -> a -> Boolean) -> Array a -> Array a
+filterWithIndex f t = _.val <$> filtered where
+    zipped = zipWith {val: _, index: _} t (0..(length t - 1))
+    filtered = zipped # filter \{val, index} -> f index val 
+
+imker :: forall a. Eq a => Field a => Matrix a -> {im :: Array (V.Vector a), ker :: Array (V.Vector a)}
+imker m@(Matrix r c _) = {im, ker} where
+    echelon = _.echelon $ gaussJordan $ augmentedMatrix $ transpose m
+    a = fromFunction c r \i j -> elem i j echelon
+    b = fromFunction c c \i j -> elem i (j + r) echelon
+    im = rows a # filter (not <<< V.null)
+    ker = rows b # filterWithIndex \i _ -> V.null (row i a)
+imker _ = {im: [], ker: []}
+
+image :: forall a. Eq a => Field a => Matrix a -> Array (V.Vector a)
+image = _.im <<< imker
+
+kernel :: forall a. Eq a => Field a => Matrix a -> Array (V.Vector a)
+kernel = _.ker <<< imker 
