@@ -18,6 +18,7 @@ module LinearAlgebra.Matrix
   , product
   , inverse
   , gaussJordan
+  , determinant
   )
   where
 
@@ -111,20 +112,21 @@ swapRows r1 r2 m = mapWithIndex fn m where
              | i == r2 = elem r1 j m
              | otherwise = x
 
-gaussJordan :: forall a. Eq a => Field a => Matrix a -> Matrix a
-gaussJordan m@(Matrix r c _) = _.mat $ foldl step {mat: m, pivot: 0} (0..(c-1)) where
-    step {mat, pivot} j =
+gaussJordan :: forall a. Eq a => Field a => Matrix a -> {echelon :: Matrix a, det :: a}
+gaussJordan m@(Matrix r c _) = {echelon: res.mat, det: res.det} where
+    res = foldl step {mat: m, pivot: 0, det: one} (0..(c-1))
+    step {mat, pivot, det} j =
         case range pivot (r-1) # find \i -> elem i j mat /= zero of
-            Nothing -> {mat, pivot}
+            Nothing -> {mat, pivot, det: zero}
             Just k ->
                 let v =  elem k j mat
                     mat2 = mapRow k (_ / v) mat
                     mat3 = swapRows k pivot mat2
                     mat4 = mat3 # mapWithIndex \i j' x -> if i == pivot then x else x - (elem i j mat3) * (elem pivot j' mat3)
-                in {mat: mat4, pivot: pivot+1}
+                in {mat: mat4, pivot: pivot+1, det: det * v * (if pivot == k then one else -one)}
     range n n' | n <= n' = n .. n'
-              | otherwise = []
-gaussJordan _ = Invalid
+               | otherwise = []
+gaussJordan _ = {echelon: Invalid, det: zero}
 
 inverse :: forall a. Eq a => Field a => Matrix a -> Matrix a
 inverse m@(Matrix r c _) | r == c =
@@ -137,6 +139,8 @@ inverse m@(Matrix r c _) | r == c =
     fAug i j | j < r = elem i j m
              | i == j - r = one
              | otherwise = zero
-    echelon = gaussJordan augmented
-
+    echelon = (gaussJordan augmented).echelon
 inverse _ = Invalid
+
+determinant :: forall a. Eq a => Field a => Matrix a -> a
+determinant = _.det <<< gaussJordan
