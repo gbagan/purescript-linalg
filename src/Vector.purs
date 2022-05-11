@@ -48,7 +48,7 @@ diff _ _ = Invalid
 
 -- | dot product between two vectors.
 -- | returns zero if the two vectors have not the same size
-
+-- | https://en.wikipedia.org/wiki/Dot_product
 dot :: forall a. Semiring a => Vector a -> Vector a -> a
 dot (Vector v1) (Vector v2)
     | length v1 == length v2 = foldl (+) zero $ zipWith (*) v1 v2
@@ -62,6 +62,8 @@ opposite :: forall a. Ring a => Vector a -> Vector a
 opposite (Vector v) = Vector $ map (zero - _) v
 opposite _ = Invalid
 
+-- | returns true if v1 and v2 are colinear i.e. there exists a scalar n such that v1 = n v2
+-- | https://en.wikipedia.org/wiki/Collinearity
 colinear :: forall a. Eq a => Field a => Vector a -> Vector a -> Boolean
 colinear (Vector v1) (Vector v2) =
     case uncons $ zipWith (/) v1 v2 of

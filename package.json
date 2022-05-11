@@ -6,7 +6,6 @@
         "test": "spago -x test.dhall test"
     },
     "devDependencies": {
-        "eslint": "^7.32.0",
         "purescript": "^0.15.0",
         "purescript-psa": "^0.8.2",
         "rimraf": "^2.7.1",

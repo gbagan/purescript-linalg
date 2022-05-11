@@ -48,7 +48,7 @@ instance Show a => Show (Matrix a) where
     show (Matrix r c m) = "(Matrix " <> show r <> " " <> show c <> " " <> show m <> ")"
 
 fromFunction :: forall a. Int -> Int -> (Int -> Int -> a) -> Matrix a
-fromFunction r c f = Matrix r c $ (0..(r-1)) <#> \i -> (0..(c-1)) <#> \j -> f i j   
+fromFunction r c f = Matrix r c $ (0..(r-1)) <#> \i -> (0..(c-1)) <#> \j -> f i j
 
 fromArray :: forall a. Array (Array a) -> Matrix a
 fromArray m = case uncons m of
@@ -71,6 +71,8 @@ ncols :: forall a. Matrix a -> Int
 ncols (Matrix _ c _) = c
 ncols _ = 0
 
+-- | returns the element at indices (i, j)
+-- | returns zero if the indices are not valid
 elem :: forall a. Semiring a => Int -> Int -> Matrix a -> a
 elem i j m = fromMaybe zero $ elem' i j m
 
@@ -100,9 +102,13 @@ rows Invalid = []
 columns :: forall a. Matrix a -> Array (V.Vector a)
 columns = rows <<< transpose
 
+-- | computes the identity matrix of size n
+-- | https://en.wikipedia.org/wiki/Identity_matrix
 identity :: forall a. Field a => Int -> Matrix a
 identity n = fromFunction n n \i j -> if i == j then one else zero
 
+-- | computes the transpose of the matrix
+-- | https://en.wikipedia.org/wiki/Transpose
 transpose :: forall a. Matrix a -> Matrix a
 transpose m@(Matrix r c _) = fromFunction c r \i j -> unsafeElem j i m
 transpose _ = Invalid
@@ -132,6 +138,8 @@ swapRows r1 r2 m = mapWithIndex fn m where
              | i == r2 = elem r1 j m
              | otherwise = x
 
+-- | computes the reduced row echelon form of the matrix and compute its determinant if the matrix is square
+-- | see https://en.wikipedia.org/wiki/Row_echelon_form
 gaussJordan :: forall a. Eq a => Field a => Matrix a -> {echelon :: Matrix a, det :: a}
 gaussJordan m@(Matrix r c _) = {echelon: res.mat, det: res.det} where
     res = foldl step {mat: m, pivot: 0, det: one} (0..(c-1))
@@ -155,6 +163,8 @@ augmentedMatrix m@(Matrix r c _) = fromFunction r (r + c) fAug where
              | otherwise = zero
 augmentedMatrix _ = Invalid
 
+-- | computes the inverse of the matrix using Gauss-Jordan Elimination and augmented matrix
+-- | https://en.wikipedia.org/wiki/Invertible_matrix#Gaussian_elimination
 inverse :: forall a. Eq a => Field a => Matrix a -> Matrix a
 inverse m@(Matrix r c _) | r == c =
     if (0..(r-1)) # all \i -> elem i i echelon == one then
