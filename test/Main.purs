@@ -23,9 +23,11 @@ main = launchAff_ $ runSpec [consoleReporter] do
 
       describe "operations" do
         it "sum" do
-          (v1 `V.sum` v2) `shouldEqual` V.fromArray [5, 7, 1, 1]
+          (v1 `V.add` v2) `shouldEqual` V.fromArray [5, 7, 1, 1]
         it "difference" do
           (v1 `V.diff` v2) `shouldEqual` V.fromArray [-1, -1, 1, -1]
+        it "scalar multiplication" do
+          (2 `V.smult` v1) `shouldEqual` V.fromArray [4, 6, 2, 0]
         it "dot product" do
           (v1 `V.dot` v2) `shouldEqual` 18
         it "colinear" do
@@ -50,7 +52,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
           M.isValid (M.fromArray [[3, 4], [1]]) `shouldEqual` false  
       describe "operations" do
         it "sum" do
-          (m1 `M.sum` m2) `shouldEqual` M.fromArray [[6, 6, 3, 3], [5, 6, 1, -7]]
+          (m1 `M.add` m2) `shouldEqual` M.fromArray [[6, 6, 3, 3], [5, 6, 1, -7]]
         it "difference" do
           (m1 `M.diff` m2) `shouldEqual` M.fromArray [[-2, 0, -1, -3], [1, 2, -1, 9]]
         it "product" do

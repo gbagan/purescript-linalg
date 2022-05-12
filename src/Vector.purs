@@ -3,16 +3,16 @@ module LinearAlgebra.Vector
   , fromArray
   , invalid
   , null
-  , sum
+  , add
   , diff
   , dot
-  , multBy
+  , smult
   , opposite
   , colinear
   )
   where
 
-import Prelude
+import Prelude hiding (add)
 import Data.Array (all, foldl, length, zipWith, uncons)
 import Data.Maybe (Maybe(..))
 
@@ -31,20 +31,17 @@ invalid :: forall a. Vector a
 invalid = Invalid
 
 -- | tests if the vector is null i.e. contains only zero values
-
 null :: forall a. Eq a => Semiring a => Vector a -> Boolean
 null (Vector v) = all (_ == zero) v
 null Invalid = true
 
-sum :: forall a. Semiring a => Vector a -> Vector a -> Vector a
-sum (Vector v1) (Vector v2)
+add :: forall a. Semiring a => Vector a -> Vector a -> Vector a
+add (Vector v1) (Vector v2)
     | length v1 == length v2 = Vector $ zipWith (+) v1 v2
-sum _ _ = Invalid
+add _ _ = Invalid
 
 diff :: forall a. Ring a => Vector a -> Vector a -> Vector a
-diff (Vector v1) (Vector v2) 
-    | length v1 == length v2 = Vector $ zipWith (-) v1 v2
-diff _ _ = Invalid
+diff v1 v2 = v1 `add` (-one `smult` v2)
 
 -- | dot product between two vectors.
 -- | returns zero if the two vectors have not the same size
@@ -54,9 +51,10 @@ dot (Vector v1) (Vector v2)
     | length v1 == length v2 = foldl (+) zero $ zipWith (*) v1 v2
 dot _ _ = zero
 
-multBy :: forall a. Semiring a => a -> Vector a -> Vector a
-multBy a (Vector v) = Vector $ map (_ * a) v
-multBy _ _ = Invalid
+-- | scalar multiplication
+smult :: forall a. Semiring a => a -> Vector a -> Vector a
+smult a (Vector v) = Vector $ map (a * _) v
+smult _ _ = Invalid
 
 opposite :: forall a. Ring a => Vector a -> Vector a
 opposite (Vector v) = Vector $ map (zero - _) v

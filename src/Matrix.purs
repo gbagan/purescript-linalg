@@ -15,15 +15,16 @@ module LinearAlgebra.Matrix
   , rows
   , columns
   , transpose
-  , sum
+  , add
   , diff
-  , multBy
+  , smult
   , product
   , inverse
   , gaussJordan
   , determinant
   , image
   , kernel
+  , rank
   )
   where
 
@@ -113,16 +114,19 @@ transpose :: forall a. Matrix a -> Matrix a
 transpose m@(Matrix r c _) = fromFunction c r \i j -> unsafeElem j i m
 transpose _ = Invalid
 
-sum :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
-sum m1 m2 | nrows m1 /= nrows m2 || ncols m1 /= ncols m2 = Invalid
+-- | computes the addition of two matrices
+-- | https://en.wikipedia.org/wiki/Matrix_addition
+add :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
+add m1 m2 | nrows m1 /= nrows m2 || ncols m1 /= ncols m2 = Invalid
           | otherwise = fromFunction (nrows m1) (ncols m1) \i j -> elem i j m1 + elem i j m2
 
 diff :: forall a. Ring a => Matrix a -> Matrix a -> Matrix a
-diff m1 m2 | nrows m1 /= nrows m2 || ncols m1 /= ncols m2 = Invalid
-           | otherwise = fromFunction (nrows m1) (ncols m1) \i j -> elem i j m1 - elem i j m2
+diff m1 m2 = add m1 (-one `smult` m2)
 
-multBy :: forall a. Semiring a => a -> Matrix a -> Matrix a
-multBy x = map (_ * x)
+-- | computes the (left) scalar multiplication of a matrice
+-- | https://en.wikipedia.org/wiki/Scalar_multiplication
+smult :: forall a. Semiring a => a -> Matrix a -> Matrix a
+smult x = map (x * _)
 
 product :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
 product m1@(Matrix r1 c1 _) m2@(Matrix r2 c2 _)
@@ -163,7 +167,8 @@ augmentedMatrix m@(Matrix r c _) = fromFunction r (r + c) fAug where
              | otherwise = zero
 augmentedMatrix _ = Invalid
 
--- | computes the inverse of the matrix using Gauss-Jordan Elimination and augmented matrix
+-- | computes the inverse of the matrix
+-- | using Gauss-Jordan Elimination and augmented matrix
 -- | https://en.wikipedia.org/wiki/Invertible_matrix#Gaussian_elimination
 inverse :: forall a. Eq a => Field a => Matrix a -> Matrix a
 inverse m@(Matrix r c _) | r == c =
@@ -175,6 +180,8 @@ inverse m@(Matrix r c _) | r == c =
     echelon = (gaussJordan $ augmentedMatrix m).echelon
 inverse _ = Invalid
 
+-- | computes the determinant of a square matrix
+-- | https://en.wikipedia.org/wiki/Determinant
 determinant :: forall a. Eq a => Field a => Matrix a -> a
 determinant = _.det <<< gaussJordan
 
@@ -192,8 +199,20 @@ imker m@(Matrix r c _) = {im, ker} where
     ker = rows b # filterWithIndex \i _ -> V.null (row i a)
 imker _ = {im: [], ker: []}
 
+
+-- | computes a basis the image (or column space) of the matrix
+-- | https://en.wikipedia.org/wiki/Row_and_column_spaces
+
 image :: forall a. Eq a => Field a => Matrix a -> Array (V.Vector a)
 image = _.im <<< imker
 
+-- | computes a basis for the kernel (or null space) of the matrix
+-- | https://en.wikipedia.org/wiki/Kernel_(linear_algebra)
+
 kernel :: forall a. Eq a => Field a => Matrix a -> Array (V.Vector a)
 kernel = _.ker <<< imker 
+
+-- | computes the rank of the matrix
+
+rank :: forall a. Eq a => Field a => Matrix a -> Int
+rank = length <<< _.im <<< imker
