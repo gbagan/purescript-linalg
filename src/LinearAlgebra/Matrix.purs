@@ -1,5 +1,6 @@
 module LinearAlgebra.Matrix
   ( Matrix
+  , Solutions
   , fromArray
   , fromFunction
   , invalid
@@ -18,23 +19,28 @@ module LinearAlgebra.Matrix
   , add
   , diff
   , smult
-  , product
+  , mult
+  , mult'
   , inverse
   , gaussJordan
+  , trace
   , determinant
   , image
   , kernel
   , rank
+  , solveLinearSystem
   )
   where
 
-import Prelude
-import Data.Array ((..), (!!), all, filter, find, foldl, length, null, uncons, zipWith)
+import Prelude hiding (add)
+
+import Data.Array ((..), (!!), all, any, filter, find, foldl, length, null, replicate, updateAtIndices, uncons, zipWith)
 import Data.Array as Array
+import Data.Maybe (Maybe(..), fromJust, fromMaybe)
 import Data.Traversable (traverse)
-import Data.Maybe (Maybe(..), fromMaybe, fromJust)
-import Partial.Unsafe (unsafePartial)
+import Data.Tuple.Nested ((/\))
 import LinearAlgebra.Vector as V
+import Partial.Unsafe (unsafePartial)
 
 data Matrix a = Matrix Int Int (Array (Array a)) | Invalid
 
@@ -49,7 +55,7 @@ instance Show a => Show (Matrix a) where
     show (Matrix r c m) = "(Matrix " <> show r <> " " <> show c <> " " <> show m <> ")"
 
 fromFunction :: forall a. Int -> Int -> (Int -> Int -> a) -> Matrix a
-fromFunction r c f = Matrix r c $ (0..(r-1)) <#> \i -> (0..(c-1)) <#> \j -> f i j
+fromFunction r c f = Matrix r c $ (0..(r-1)) <#> \i -> (0..(c-1)) <#> f i
 
 fromArray :: forall a. Array (Array a) -> Matrix a
 fromArray m = case uncons m of
@@ -128,10 +134,15 @@ diff m1 m2 = add m1 (-one `smult` m2)
 smult :: forall a. Semiring a => a -> Matrix a -> Matrix a
 smult x = map (x * _)
 
-product :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
-product m1@(Matrix r1 c1 _) m2@(Matrix r2 c2 _)
+mult :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
+mult m1@(Matrix r1 c1 _) m2@(Matrix r2 c2 _)
     | c1 == r2 = fromFunction r1 c2 \i j -> V.dot (row i m1) (column j m2)
-product _ _ = Invalid
+mult _ _ = Invalid
+
+mult' :: forall a. Semiring a => Matrix a -> V.Vector a -> V.Vector a
+mult' m@(Matrix r _ _) v = V.fromFunction r \i -> V.dot (row i m) v
+mult' _ _ = V.invalid
+
 
 mapRow :: forall a. Int -> (a -> a) -> Matrix a -> Matrix a 
 mapRow k f = mapWithIndex \i _ x -> if i == k then f x else x
@@ -144,8 +155,8 @@ swapRows r1 r2 m = mapWithIndex fn m where
 
 -- | computes the reduced row echelon form of the matrix and compute its determinant if the matrix is square
 -- | see https://en.wikipedia.org/wiki/Row_echelon_form
-gaussJordan :: forall a. Eq a => Field a => Matrix a -> {echelon :: Matrix a, det :: a}
-gaussJordan m@(Matrix r c _) = {echelon: res.mat, det: res.det} where
+gaussJordan :: forall a. Eq a => Field a => Matrix a -> {mat :: Matrix a, det :: a}
+gaussJordan m@(Matrix r c _) = {mat: res.mat, det: res.det} where
     res = foldl step {mat: m, pivot: 0, det: one} (0..(c-1))
     step {mat, pivot, det} j =
         case range pivot (r-1) # find \i -> elem i j mat /= zero of
@@ -154,11 +165,15 @@ gaussJordan m@(Matrix r c _) = {echelon: res.mat, det: res.det} where
                 let v =  elem k j mat
                     mat2 = mapRow k (_ / v) mat
                     mat3 = swapRows k pivot mat2
-                    mat4 = mat3 # mapWithIndex \i j' x -> if i == pivot then x else x - (elem i j mat3) * (elem pivot j' mat3)
-                in {mat: mat4, pivot: pivot+1, det: det * v * (if pivot == k then one else -one)}
+                    mat4 = mat3 # mapWithIndex \i j' x ->
+                        if i == pivot then x else x - (elem i j mat3) * (elem pivot j' mat3)
+                in { mat: mat4
+                   , pivot: pivot+1
+                   , det: det * v * (if pivot == k then one else -one)
+                   }
     range n n' | n <= n' = n .. n'
                | otherwise = []
-gaussJordan _ = {echelon: Invalid, det: zero}
+gaussJordan _ = {mat: Invalid, det: zero}
 
 augmentedMatrix :: forall a. Semiring a => Matrix a -> Matrix a
 augmentedMatrix m@(Matrix r c _) = fromFunction r (r + c) fAug where
@@ -172,13 +187,20 @@ augmentedMatrix _ = Invalid
 -- | https://en.wikipedia.org/wiki/Invertible_matrix#Gaussian_elimination
 inverse :: forall a. Eq a => Field a => Matrix a -> Matrix a
 inverse m@(Matrix r c _) | r == c =
-    if (0..(r-1)) # all \i -> elem i i echelon == one then
+    if elem (r-1) (r-1) echelon == one then
         fromFunction r r \i j -> elem i (j + r) echelon
     else
         Invalid
     where
-    echelon = (gaussJordan $ augmentedMatrix m).echelon
+    echelon = _.mat $ gaussJordan $ augmentedMatrix m
 inverse _ = Invalid
+
+-- | computes the trace of the matrix
+-- | https://en.wikipedia.org/wiki/Trace_(linear_algebra)
+trace :: forall a. Eq a => Semiring a => Matrix a -> a
+trace m@(Matrix r c _) | r == c =
+    0 .. (r-1) # foldl (\acc i -> acc + elem i i m) zero 
+trace _ = zero
 
 -- | computes the determinant of a square matrix
 -- | https://en.wikipedia.org/wiki/Determinant
@@ -192,7 +214,7 @@ filterWithIndex f t = _.val <$> filtered where
 
 imker :: forall a. Eq a => Field a => Matrix a -> {im :: Array (V.Vector a), ker :: Array (V.Vector a)}
 imker m@(Matrix r c _) = {im, ker} where
-    echelon = _.echelon $ gaussJordan $ augmentedMatrix $ transpose m
+    echelon = _.mat $ gaussJordan $ augmentedMatrix $ transpose m
     a = fromFunction c r \i j -> elem i j echelon
     b = fromFunction c c \i j -> elem i (j + r) echelon
     im = rows a # filter (not <<< V.null)
@@ -202,17 +224,45 @@ imker _ = {im: [], ker: []}
 
 -- | computes a basis the image (or column space) of the matrix
 -- | https://en.wikipedia.org/wiki/Row_and_column_spaces
-
 image :: forall a. Eq a => Field a => Matrix a -> Array (V.Vector a)
 image = _.im <<< imker
 
 -- | computes a basis for the kernel (or null space) of the matrix
 -- | https://en.wikipedia.org/wiki/Kernel_(linear_algebra)
-
 kernel :: forall a. Eq a => Field a => Matrix a -> Array (V.Vector a)
 kernel = _.ker <<< imker 
 
 -- | computes the rank of the matrix
-
 rank :: forall a. Eq a => Field a => Matrix a -> Int
 rank = length <<< _.im <<< imker
+
+-- | Represents the set of solutions for the function solveEquation.
+-- | The set of solutions is { sol + v | v is a linear combination of vectors in basis }
+type Solutions a = {sol :: V.Vector a, basis :: Array (V.Vector a)}
+
+-- | solve the equation M x = b for a given matrix M and vector b
+solveLinearSystem :: forall a. Eq a => Field a => Matrix a -> V.Vector a -> Maybe (Solutions a)
+solveLinearSystem m@(Matrix r c _) b = 
+    -- if the last non zero row contains is of the form 0 = 1 then there is no solution 
+    if 0..(c-1) # all \j -> elem (r'-1) j echelon == zero then
+        Nothing
+    else
+        let toBeUpdated = 0..(r'-1) <#> (\i ->
+            -- k is the column of the leading one of the row i, k always exists
+            let k = fromMaybe 0 $ 0..(c-1) # find \j -> elem i j echelon == one in
+            k /\ elem i c echelon
+        )
+            sol = V.fromArray $ updateAtIndices toBeUpdated (replicate c zero)
+        in Just {sol, basis: kernel m}
+    where
+    augmented = fromFunction r (c+1) \i j -> if j == c then V.elem i b else elem i j m
+    echelon = removeZeroRows $ _.mat $ gaussJordan augmented
+    r' =  nrows echelon
+
+solveLinearSystem _ _ = Nothing
+
+removeZeroRows :: forall a. Eq a => Semiring a => Matrix a -> Matrix a
+removeZeroRows (Matrix _ c m) =
+    let m' = filter (any (_ /= zero)) m in
+    Matrix (Array.length m') c m'
+removeZeroRows _ = Invalid

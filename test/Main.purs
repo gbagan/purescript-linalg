@@ -1,11 +1,14 @@
 module Test.Main where
+
 import Prelude
+
 import Data.Array as Array
+import Data.Maybe (Maybe(..))
 import Data.Rational ((%))
-import LinearAlgebra.Vector as V
-import LinearAlgebra.Matrix as M
 import Effect (Effect)
 import Effect.Aff (launchAff_)
+import LinearAlgebra.Matrix as M
+import LinearAlgebra.Vector as V
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy, shouldNotSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)
@@ -35,13 +38,19 @@ main = launchAff_ $ runSpec [consoleReporter] do
           (v3 `V.colinear` v5) `shouldEqual` false
 
     describe "matrices" do
-      let m1 = M.fromArray [[2, 3, 1, 0], [3, 4, 0, 1]]
+      let m1 = M.fromArray [ [2, 3, 1, 0]
+                           , [3, 4, 0, 1]
+                           ]
       let m2 = M.fromArray [[4, 3, 2, 3], [2, 2, 1, -8]]
       let m3 = M.fromArray [[-1, 3], [2, 3], [3, 1], [4, -3]]
       let m4 = M.fromArray [[-1%1, 3%2], [1%1, -1%1]]
-      let m5 = M.fromArray [[2%1, -1%1, 0%1], [0%1, -1%1, 2%1], [-1%1, 2%1, -1%1]]
+      let m5 = M.fromArray [[2%1, -1%1, 0%1]
+                          , [0%1, -1%1, 2%1]
+                          , [-1%1, 2%1, -1%1]
+                          ]
       let m6 = M.fromArray [[0%1, 1%1], [1%1, 0%1]]
       let m7 = M.fromArray [[1%1,2%1], [2%1, 4%1], [3%1, 6%1]]
+      let m8 = M.fromArray [[1%1, 1%1, 0%1], [0%1, 1%1, 1%1], [1%1, 2%1, 1%1]]
 
       describe "invalid matrices" do
         it "empty matrix" do
@@ -56,21 +65,48 @@ main = launchAff_ $ runSpec [consoleReporter] do
         it "difference" do
           (m1 `M.diff` m2) `shouldEqual` M.fromArray [[-2, 0, -1, -3], [1, 2, -1, 9]]
         it "product" do
-          (m1 `M.product` m3) `shouldEqual` M.fromArray [[7,16],[9,18]]
+          (m1 `M.mult` m3) `shouldEqual` M.fromArray [[7,16],[9,18]]
         it "transpose" do
           M.transpose m1 `shouldEqual` M.fromArray [[2,3],[3,4],[1,0],[0,1]]
-        it "inverse" do
-          M.inverse m4 `shouldEqual` M.fromArray [[2 % 1,3 % 1],[2 % 1,2 % 1]]
-          M.inverse m5 `shouldEqual` M.fromArray [[3 % 4,1 % 4,1 % 2],[1 % 2,1 % 2,1 % 1],[1 % 4,3 % 4,1 % 2]]
+        it "inverse 2x2" do
+          let m4' = M.fromArray [[2%1,3%1],[2%1,2%1]]
+          M.inverse m4 `shouldEqual` m4'
+        it "inverse 3x3" do
+          let m5' = M.fromArray [[3%4,1%4,1%2],[1%2,1%2,1%1],[1%4,3%4,1%2]]
+          M.inverse m5 `shouldEqual` m5'
+        it "inverse 2x2 bis" do
           M.inverse m6 `shouldEqual` m6
-        it "determinant" do
+        it "inverse (not inversible)" do
+          M.inverse m8 `shouldNotSatisfy` M.isValid
+        it "determinant 1" do
           M.determinant m4 `shouldEqual` (-1 % 2)
+        it "determinant 2" do
           M.determinant m5 `shouldEqual` (-4 % 1)
+        it "determinant 3" do
           M.determinant m6 `shouldEqual` (-1 % 1)
+        it "determinant 4" do
+          M.determinant m8 `shouldEqual` (0%1)
         it "image" do
           Array.length (M.image m5) `shouldEqual` 3
-        it "kernel" do
+        it "kernel 1" do
           M.kernel m5 `shouldEqual` []
-        it "kernel" do
+        it "kernel 2" do
           M.kernel m7 `shouldSatisfy` \m -> Array.length m == 1 
-                                            && Array.all (\v -> v `V.colinear` V.fromArray [2%1, -1%1]) m
+                                         && Array.all (_ `V.colinear` V.fromArray [2%1, -1%1]) m
+      describe "solve linear system" do
+        it "system 1" do
+          let b = V.fromArray [1%1, 3%1, 2%1]
+          let x = V.fromArray [5%2, 4%1, 7%2]
+          M.solveLinearSystem m5 b `shouldEqual` (Just {sol: x, basis: []})
+        it "system 2" do
+          let m = M.fromArray [ [1%1, 2%1, 0%1, 0%1]
+                              , [0%1, 3%1, 4%1, 0%1]
+                              , [0%1, 0%1, 5%1, 6%1]
+                              ]
+          let b = V.fromArray [7%1, 8%1, 9%1]
+          case M.solveLinearSystem m b of
+            Just {sol, basis} -> do
+              sol `shouldSatisfy` \v -> M.mult' m v == b 
+              basis `shouldSatisfy` \bs -> Array.length bs == 1 
+                                        && Array.all (_ `V.colinear` V.fromArray [-16%5, 8%5, -6%5, 1%1]) bs
+            Nothing -> pure unit
