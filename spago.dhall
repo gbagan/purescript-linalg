@@ -1,4 +1,4 @@
-{ name = "linear-algebra"
+{ name = "linalg"
 , license = "MIT"
 , repository = "https://github.com/gbagan/purescript-linalg"
 , dependencies =
