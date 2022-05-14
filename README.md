@@ -29,6 +29,7 @@ You can write something like this
 
 ```purescript
 module Main where
+import Prelude
 import Effect.Console (logShow)
 import Data.Rational ((%))
 import LinearAlgebra.Vector as V
