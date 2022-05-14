@@ -40,7 +40,7 @@ main = do
                       , [0%1, 0%1, 5%1, 6%1]
                       ]
   let b = V.fromArray [7%1, 8%1, 9%1]
-  log $ solveLinearSystem m b
+  logShow $ solveLinearSystem m b
 ```
 
 and obtain
