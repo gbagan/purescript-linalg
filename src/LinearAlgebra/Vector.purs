@@ -47,7 +47,6 @@ elem i v = fromMaybe zero $ elem' i v
 
 elem' :: forall a. Int -> Vector a -> Maybe a
 elem' i (Vector m) = m !! i
-elem' _ _ = Nothing
 
 -- | tests if the vector is null i.e. contains only zero values
 null :: forall a. Eq a => Semiring a => Vector a -> Boolean

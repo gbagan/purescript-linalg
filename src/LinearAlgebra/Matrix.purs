@@ -236,7 +236,7 @@ kernel = _.ker <<< imker
 rank :: forall a. Eq a => Field a => Matrix a -> Int
 rank = length <<< _.im <<< imker
 
--- | Represents the set of solutions for the function solveEquation.
+-- | Represents the set of solutions for the function solveLinearSystem.
 -- | The set of solutions is { sol + v | v is a linear combination of vectors in basis }
 type Solutions a = {sol :: V.Vector a, basis :: Array (V.Vector a)}
 
