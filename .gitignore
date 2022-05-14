@@ -2,3 +2,5 @@
 node_modules
 output/
 package-lock.json
+.vscode
+.psc-ide-port
