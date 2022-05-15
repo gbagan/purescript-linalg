@@ -2,6 +2,7 @@ module LinearAlgebra.Matrix
   ( Matrix
   , Solutions
   , fromArray
+  , toArray
   , fromFunction
   , invalid
   , isValid
@@ -62,6 +63,10 @@ fromArray m = case uncons m of
     Just {head, tail} | not (null head) && all (\line -> length line == length head) tail ->
         Matrix (length m) (length head) m
     _ -> Invalid
+
+toArray :: forall a. Matrix a -> Array (Array a)
+toArray (Matrix _ _ m) = m
+toArray Invalid = []
 
 invalid :: forall a. Matrix a
 invalid = Invalid

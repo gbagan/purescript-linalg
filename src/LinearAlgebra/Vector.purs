@@ -1,6 +1,7 @@
 module LinearAlgebra.Vector
   ( Vector
   , fromArray
+  , toArray
   , fromFunction
   , invalid
   , isValid
@@ -30,6 +31,9 @@ instance Show a => Show (Vector a) where
 
 fromArray :: forall a. Array a -> Vector a
 fromArray = Vector
+
+toArray :: forall a. Vector a -> Array a
+toArray (Vector v) = v
 
 fromFunction :: forall a. Int -> (Int -> a) -> Vector a
 fromFunction n f = Vector $ f <$> 0..(n-1)
