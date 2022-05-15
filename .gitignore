@@ -6,4 +6,4 @@ package-lock.json
 .pulp-cache
 .psc-ide-port
 bower_components
-generated-docs
+generated-docs/
