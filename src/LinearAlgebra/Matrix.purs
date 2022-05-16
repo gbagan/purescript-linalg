@@ -30,6 +30,7 @@ module LinearAlgebra.Matrix
   , kernel
   , rank
   , solveLinearSystem
+  , solveLinearSystem'
   )
   where
 
@@ -37,6 +38,7 @@ import Prelude hiding (add)
 
 import Data.Array ((..), (!!), all, any, filter, find, foldl, length, null, replicate, updateAtIndices, uncons, zipWith)
 import Data.Array as Array
+import Data.Function.Uncurried (Fn4, runFn4)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe)
 import Data.Traversable (traverse)
 import Data.Tuple.Nested ((/\))
@@ -95,8 +97,11 @@ elem' :: forall a. Int -> Int -> Matrix a -> Maybe a
 elem' i j (Matrix _ _ m) = m !! i >>= (_ !! j)
 elem' _ _ Invalid = Nothing
 
-mapWithIndex :: forall a. (Int -> Int -> a -> a) -> Matrix a -> Matrix a
-mapWithIndex f (Matrix r c m) = Matrix r c $ m # Array.mapWithIndex \i -> Array.mapWithIndex (f i)
+-- mapWithIndex is the bottleneck for many algorithms so it is implemented in javascript
+foreign import _mapWithIndex :: forall a b. Fn4 (Array (Array a)) Int Int (Int -> Int -> a -> b) (Array (Array b))
+
+mapWithIndex :: forall a b. (Int -> Int -> a -> b) -> Matrix a -> Matrix b
+mapWithIndex f (Matrix r c m) = Matrix r c $ runFn4 _mapWithIndex m r c f
 mapWithIndex _ _ = Invalid
 
 row :: forall a. Int -> Matrix a -> V.Vector a
@@ -247,7 +252,11 @@ type Solutions a = {sol :: V.Vector a, basis :: Array (V.Vector a)}
 
 -- | solve the equation M x = b for a given matrix M and vector b
 solveLinearSystem :: forall a. Eq a => Field a => Matrix a -> V.Vector a -> Maybe (Solutions a)
-solveLinearSystem m@(Matrix r c _) b = 
+solveLinearSystem m b = {sol: _, basis: kernel m} <$> solveLinearSystem' m b
+
+-- | same as solveLinearSystem but without basis
+solveLinearSystem' :: forall a. Eq a => Field a => Matrix a -> V.Vector a -> Maybe (V.Vector a)
+solveLinearSystem' m@(Matrix r c _) b = 
     -- if the last non zero row contains is of the form 0 = 1 then there is no solution 
     if 0..(c-1) # all \j -> elem (r'-1) j echelon == zero then
         Nothing
@@ -258,13 +267,13 @@ solveLinearSystem m@(Matrix r c _) b =
             k /\ elem i c echelon
         )
             sol = V.fromArray $ updateAtIndices toBeUpdated (replicate c zero)
-        in Just {sol, basis: kernel m}
+        in Just sol
     where
     augmented = fromFunction r (c+1) \i j -> if j == c then V.elem i b else elem i j m
     echelon = removeZeroRows $ _.mat $ gaussJordan augmented
     r' =  nrows echelon
 
-solveLinearSystem _ _ = Nothing
+solveLinearSystem' _ _ = Nothing
 
 removeZeroRows :: forall a. Eq a => Semiring a => Matrix a -> Matrix a
 removeZeroRows (Matrix _ c m) =
