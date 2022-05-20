@@ -64,7 +64,7 @@ main = do
 and obtain
 ```Just { basis: [(Vector [1 % 1,-1 % 2,3 % 8,-5 % 16])], sol: (Vector [97 % 15,4 % 15,9 % 5,0 % 1]) }```
 
-That means that the solutions are
+That means the solutions are
 
 $$\begin{bmatrix}
      \frac{97}{15} \\
