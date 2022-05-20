@@ -20,7 +20,7 @@ Install
 
 ### Example
 
-to solve the following linear system in $\mathbb{Q}
+to solve the following linear system in $\mathbb{Q}$
 - x + 2y = 7
 - 3y + 4z = 8
 - 5z + 6t = 9
