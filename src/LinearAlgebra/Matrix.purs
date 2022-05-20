@@ -1,30 +1,31 @@
 module LinearAlgebra.Matrix
-  ( Matrix
+  ( Matrix  
   , Solutions
-  , add
-  , column
-  , columns
-  , determinant
-  , diff
-  , elem
-  , elem'
   , fromArray
   , fromFunction
-  , gaussJordan
   , identity
-  , image
-  , invalid
-  , inverse
-  , isValid
-  , kernel
   , mapWithIndex
-  , mult
-  , mult'
+  , isValid
+  , invalid
   , ncols
   , nrows
+  , column
+  , columns
+  , elem
+  , elem'
+  , add
+  , diff
+  , mult
+  , mult'
+  , smult
+  , inverse
+  , determinant
+  , gaussJordan
+  , image
+  , kernel
+  , rank
   , row
   , rows
-  , smult
   , solveLinearSystem
   , solveLinearSystem'
   , toArray
@@ -178,15 +179,15 @@ augmentedMatrix m@(Matrix {r, c}) = fromFunction r (r + c) fAug where
 -- | computes the inverse of the matrix
 -- | using Gauss-Jordan Elimination and augmented matrix
 -- | https://en.wikipedia.org/wiki/Invertible_matrix#Gaussian_elimination
-inverse :: forall a. Eq a => Field a => Matrix a -> Matrix a
+inverse :: forall a. Eq a => Field a => Matrix a -> Maybe (Matrix a)
 inverse m@(Matrix {r, c}) | r == c =
     if elem (r-1) (r-1) echelon == one then
-        fromFunction r r \i j -> elem i (j + r) echelon
+        Just $ fromFunction r r \i j -> elem i (j + r) echelon
     else
-        invalid
+        Nothing
     where
     echelon = _.mat $ gaussJordan $ augmentedMatrix m
-inverse _ = invalid
+inverse _ = Nothing
 
 -- | computes the trace of the matrix
 -- | https://en.wikipedia.org/wiki/Trace_(linear_algebra)

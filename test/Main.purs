@@ -70,14 +70,14 @@ main = launchAff_ $ runSpec [consoleReporter] do
           M.transpose m1 `shouldEqual` M.fromArray [[2,3],[3,4],[1,0],[0,1]]
         it "inverse 2x2" do
           let m4' = M.fromArray [[2%1,3%1],[2%1,2%1]]
-          M.inverse m4 `shouldEqual` m4'
+          M.inverse m4 `shouldEqual` Just m4'
         it "inverse 3x3" do
           let m5' = M.fromArray [[3%4,1%4,1%2],[1%2,1%2,1%1],[1%4,3%4,1%2]]
-          M.inverse m5 `shouldEqual` m5'
+          M.inverse m5 `shouldEqual` Just m5'
         it "inverse 2x2 bis" do
-          M.inverse m6 `shouldEqual` m6
+          M.inverse m6 `shouldEqual` Just m6
         it "inverse (not inversible)" do
-          M.inverse m8 `shouldNotSatisfy` M.isValid
+          M.inverse m8 `shouldEqual` Nothing
         it "determinant 1" do
           M.determinant m4 `shouldEqual` (-1 % 2)
         it "determinant 2" do

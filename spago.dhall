@@ -6,7 +6,6 @@
   , "foldable-traversable"
   , "functions"
   , "maybe"
-  , "partial"
   , "prelude"
   , "tuples"
   ]
