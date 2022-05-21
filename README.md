@@ -53,12 +53,12 @@ import LinearAlgebra.Vector as V
 import LinearAlgebra.Matrix as M
 
 main = do
-  let m = M.fromArray [ [1%1, 2%1, 0%1, 0%1]
-                      , [0%1, 3%1, 4%1, 0%1]
-                      , [0%1, 0%1, 5%1, 6%1]
-                      ]
+  let m = M.fromArray 3 4 [ [1%1, 2%1, 0%1, 0%1]
+                          , [0%1, 3%1, 4%1, 0%1]
+                          , [0%1, 0%1, 5%1, 6%1]
+                          ]
   let b = V.fromArray [7%1, 8%1, 9%1]
-  logShow $ solveLinearSystem m b
+  logShow $ M.solveLinearSystem m b
 ```
 
 and obtain

@@ -31,7 +31,7 @@ module LinearAlgebra.Matrix
   ) where
 
 import Prelude hiding (add)
-import Data.Array ((..), (!!), all, any, filter, find, foldl, length, null, replicate, updateAtIndices, uncons, zipWith)
+import Data.Array ((..), (!!), all, any, filter, find, foldl, length, replicate, updateAtIndices, zipWith)
 import Data.Array as Array
 import Data.Function.Uncurried (Fn3, Fn4, runFn3, runFn4)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -45,11 +45,11 @@ newtype Matrix a
 derive instance Eq a => Eq (Matrix a)
 
 instance Functor Matrix where
-    map f (Matrix {r, c, m}) = Matrix {r, c, m: map (map f) m}
+  map f (Matrix {r, c, m}) = Matrix {r, c, m: map (map f) m}
 
 instance Show a => Show (Matrix a) where
-    show (Matrix {r, c, m}) | r == 0 = "Invalid matrix"
-                            | otherwise = "(Matrix " <> show r <> " " <> show c <> " " <> show m <> ")"
+  show (Matrix {r, c, m}) | r == 0 = "Invalid matrix"
+                          | otherwise = "(Matrix " <> show r <> " " <> show c <> " " <> show m <> ")"
 
 invalid :: forall a. Matrix a
 invalid = Matrix { r: 0, c: 0, m: [] }
