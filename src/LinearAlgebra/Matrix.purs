@@ -1,18 +1,15 @@
 module LinearAlgebra.Matrix
-  ( Matrix
+  ( Matrix  
   , Solutions
   , fromArray
   , fromFunction
   , identity
+  , mapWithIndex
   , invalid
-  , toArray
-  , column
-  , row
-  , columns
-  , rows
   , ncols
   , nrows
-  , mapWithIndex
+  , column
+  , columns
   , elem
   , elem'
   , add
@@ -190,6 +187,7 @@ augmentedMatrix m@(Matrix { r, c }) = fromFunction r (r + c) fAug
 -- | using Gauss-Jordan Elimination and augmented matrix
 -- | https://en.wikipedia.org/wiki/Invertible_matrix#Gaussian_elimination
 inverse :: forall a. Eq a => Field a => Matrix a -> Maybe (Matrix a)
+
 inverse m@(Matrix { r, c })
   | r == c =
     if elem (r - 1) (r - 1) echelon == one then

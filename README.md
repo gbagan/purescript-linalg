@@ -20,12 +20,29 @@ Install
 
 ### Example
 
-to solve the following linear system in Q
+Consider the following linear system in $\mathbb{Q}$
 - x + 2y = 7
 - 3y + 4z = 8
 - 5z + 6t = 9
 
-You can write something like this
+This is equivalent to solve
+
+$$\begin{bmatrix}
+  1 & 2 & 0 & 0\\
+  0 & 3 & 4 & 0\\
+  0 & 0 & 5 & 6
+\end{bmatrix} \begin{bmatrix}
+           x \\
+           y \\
+           z \\
+           t
+\end{bmatrix} = \begin{bmatrix}
+      7 \\
+      8 \\
+      9 
+\end{bmatrix}$$
+
+You can solve with LinAlg in that way.
 
 ```purescript
 module Main where
@@ -47,4 +64,18 @@ main = do
 and obtain
 ```Just { basis: [(Vector [1 % 1,-1 % 2,3 % 8,-5 % 16])], sol: (Vector [97 % 15,4 % 15,9 % 5,0 % 1]) }```
 
-That means that the set of solutions is { [97/15, 4/15, 9/5, 0] + q * [1; -1/2; 3/8; -5/16] | q in Q }
+That means the solutions are
+
+$$\begin{bmatrix}
+     \frac{97}{15} \\
+     \frac{4}{15} \\
+     \frac{9}{5} \\
+     0
+   \end{bmatrix} + q \begin{bmatrix}
+   1 \\
+   -\frac{1}{2} \\
+   \frac{3}{8} \\
+   -\frac{5}{16}
+   \end{bmatrix}$$
+
+for any $q \in \mathbb{Q}$
