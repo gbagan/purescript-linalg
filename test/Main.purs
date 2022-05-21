@@ -38,46 +38,39 @@ main = launchAff_ $ runSpec [consoleReporter] do
           (v3 `V.colinear` v5) `shouldEqual` false
 
     describe "matrices" do
-      let m1 = M.fromArray [ [2, 3, 1, 0]
-                           , [3, 4, 0, 1]
-                           ]
-      let m2 = M.fromArray [[4, 3, 2, 3], [2, 2, 1, -8]]
-      let m3 = M.fromArray [[-1, 3], [2, 3], [3, 1], [4, -3]]
-      let m4 = M.fromArray [[-1%1, 3%2], [1%1, -1%1]]
-      let m5 = M.fromArray [[2%1, -1%1, 0%1]
-                          , [0%1, -1%1, 2%1]
-                          , [-1%1, 2%1, -1%1]
-                          ]
-      let m6 = M.fromArray [[0%1, 1%1], [1%1, 0%1]]
-      let m7 = M.fromArray [[1%1,2%1], [2%1, 4%1], [3%1, 6%1]]
-      let m8 = M.fromArray [[1%1, 1%1, 0%1], [0%1, 1%1, 1%1], [1%1, 2%1, 1%1]]
+      let m1 = M.fromArray 2 4 [ [2, 3, 1, 0]
+                               , [3, 4, 0, 1]
+                               ]
+      let m2 = M.fromArray 2 4 [[4, 3, 2, 3], [2, 2, 1, -8]]
+      let m3 = M.fromArray 4 2 [[-1, 3], [2, 3], [3, 1], [4, -3]]
+      let m4 = M.fromArray 2 2 [[-1%1, 3%2], [1%1, -1%1]]
+      let m5 = M.fromArray 3 3 [ [2%1, -1%1, 0%1]
+                               , [0%1, -1%1, 2%1]
+                               , [-1%1, 2%1, -1%1]
+                               ]
+      let m6 = M.fromArray 2 2 [[0%1, 1%1], [1%1, 0%1]]
+      let m7 = M.fromArray 3 2 [[1%1,2%1], [2%1, 4%1], [3%1, 6%1]]
+      let m8 = M.fromArray 3 3 [[1%1, 1%1, 0%1], [0%1, 1%1, 1%1], [1%1, 2%1, 1%1]]
 
-      describe "invalid matrices" do
-        it "empty matrix" do
-          (M.fromArray [] :: M.Matrix Int) `shouldNotSatisfy` M.isValid
-        it "matrix with empty columns" do
-          M.isValid (M.fromArray [[], []] :: M.Matrix Int) `shouldEqual` false
-        it "matrix with different column sizes" do
-          M.isValid (M.fromArray [[3, 4], [1]]) `shouldEqual` false  
       describe "operations" do
         it "sum" do
-          (m1 `M.add` m2) `shouldEqual` M.fromArray [[6, 6, 3, 3], [5, 6, 1, -7]]
+          (m1 `M.add` m2) `shouldEqual` M.fromArray 2 4 [[6, 6, 3, 3], [5, 6, 1, -7]]
         it "difference" do
-          (m1 `M.diff` m2) `shouldEqual` M.fromArray [[-2, 0, -1, -3], [1, 2, -1, 9]]
+          (m1 `M.diff` m2) `shouldEqual` M.fromArray 2 4 [[-2, 0, -1, -3], [1, 2, -1, 9]]
         it "product" do
-          (m1 `M.mult` m3) `shouldEqual` M.fromArray [[7,16],[9,18]]
+          (m1 `M.mult` m3) `shouldEqual` M.fromArray 2 2 [[7,16],[9,18]]
         it "transpose" do
-          M.transpose m1 `shouldEqual` M.fromArray [[2,3],[3,4],[1,0],[0,1]]
+          M.transpose m1 `shouldEqual` M.fromArray 4 2 [[2,3],[3,4],[1,0],[0,1]]
         it "inverse 2x2" do
-          let m4' = M.fromArray [[2%1,3%1],[2%1,2%1]]
-          M.inverse m4 `shouldEqual` m4'
+          let m4' = M.fromArray 2 2 [[2%1,3%1],[2%1,2%1]]
+          M.inverse m4 `shouldEqual` Just m4'
         it "inverse 3x3" do
-          let m5' = M.fromArray [[3%4,1%4,1%2],[1%2,1%2,1%1],[1%4,3%4,1%2]]
-          M.inverse m5 `shouldEqual` m5'
+          let m5' = M.fromArray 3 3 [[3%4,1%4,1%2],[1%2,1%2,1%1],[1%4,3%4,1%2]]
+          M.inverse m5 `shouldEqual` Just m5'
         it "inverse 2x2 bis" do
-          M.inverse m6 `shouldEqual` m6
+          M.inverse m6 `shouldEqual` Just m6
         it "inverse (not inversible)" do
-          M.inverse m8 `shouldNotSatisfy` M.isValid
+          M.inverse m8 `shouldEqual` Nothing
         it "determinant 1" do
           M.determinant m4 `shouldEqual` (-1 % 2)
         it "determinant 2" do
@@ -99,10 +92,10 @@ main = launchAff_ $ runSpec [consoleReporter] do
           let x = V.fromArray [5%2, 4%1, 7%2]
           M.solveLinearSystem m5 b `shouldEqual` (Just {sol: x, basis: []})
         it "system 2" do
-          let m = M.fromArray [ [1%1, 2%1, 0%1, 0%1]
-                              , [0%1, 3%1, 4%1, 0%1]
-                              , [0%1, 0%1, 5%1, 6%1]
-                              ]
+          let m = M.fromArray 3 4 [ [1%1, 2%1, 0%1, 0%1]
+                                  , [0%1, 3%1, 4%1, 0%1]
+                                  , [0%1, 0%1, 5%1, 6%1]
+                                  ]
           let b = V.fromArray [7%1, 8%1, 9%1]
           case M.solveLinearSystem m b of
             Just {sol, basis} -> do
