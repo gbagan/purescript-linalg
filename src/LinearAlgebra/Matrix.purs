@@ -5,7 +5,7 @@ module LinearAlgebra.Matrix
   , fromFunction
   , identity
   , mapWithIndex
-  , invalid
+  , toArray
   , ncols
   , nrows
   , column
