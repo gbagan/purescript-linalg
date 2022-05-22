@@ -219,8 +219,8 @@ determinant = _.det <<< gaussJordan
 filterWithIndex :: forall a. (Int -> a -> Boolean) -> Array a -> Array a
 filterWithIndex f t = _.val <$> filtered
   where
-  zipped = zipWith { val: _, index: _ } t (0 .. (length t - 1))
-  filtered = zipped # filter \{ val, index } -> f index val
+  zipped = zipWith { val: _, i: _ } t (0 .. (length t - 1))
+  filtered = zipped # filter \{ val, i } -> f i val
 
 imker :: forall a. Eq a => Field a => Matrix a -> { im :: Array (V.Vector a), ker :: Array (V.Vector a) }
 imker m@(Matrix { r, c }) = { im, ker }

@@ -10,7 +10,7 @@ import Effect.Aff (launchAff_)
 import LinearAlgebra.Matrix as M
 import LinearAlgebra.Vector as V
 import Test.Spec (describe, it)
-import Test.Spec.Assertions (shouldEqual, shouldSatisfy, shouldNotSatisfy)
+import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
 
