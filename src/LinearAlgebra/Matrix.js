@@ -10,6 +10,6 @@ export function _mapWithIndex(m, r, c, f) {
     return m2;
 }
 
-export function unsafeElem(m, i, j) {
+export function unsafeIndex(m, i, j) {
     return m.m[i][j]
 }

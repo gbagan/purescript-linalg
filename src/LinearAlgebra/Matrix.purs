@@ -10,8 +10,8 @@ module LinearAlgebra.Matrix
   , nrows
   , column
   , columns
-  , elem
-  , elem'
+  , index
+  , index'
   , add
   , diff
   , scale
@@ -71,13 +71,13 @@ ncols (Matrix { c }) = c
 
 -- | returns the element at indices (i, j)
 -- | returns zero if the indices are not valid
-elem :: forall a. Semiring a => Int -> Int -> Matrix a -> a
-elem i j m = fromMaybe zero $ elem' i j m
+index :: forall a. Semiring a => Int -> Int -> Matrix a -> a
+index i j m = fromMaybe zero $ index' i j m
 
-foreign import unsafeElem :: forall a. Fn3 (Matrix a) Int Int a
+foreign import unsafeIndex :: forall a. Fn3 (Matrix a) Int Int a
 
-elem' :: forall a. Int -> Int -> Matrix a -> Maybe a
-elem' i j (Matrix { m }) = m !! i >>= (_ !! j)
+index' :: forall a. Int -> Int -> Matrix a -> Maybe a
+index' i j (Matrix { m }) = m !! i >>= (_ !! j)
 
 -- mapWithIndex is the bottleneck for many algorithms so it is implemented in javascript
 foreign import _mapWithIndex :: forall a b. Fn4 (Array (Array a)) Int Int (Int -> Int -> a -> b) (Array (Array b))
@@ -89,7 +89,7 @@ row :: forall a. Int -> Matrix a -> V.Vector a
 row i (Matrix { m }) = fromMaybe (V.fromArray []) $ V.fromArray <$> m !! i
 
 column :: forall a. Int -> Matrix a -> V.Vector a
-column j m@(Matrix { r }) = fromMaybe (V.fromArray []) $ V.fromArray <$> traverse (\i -> elem' i j m) (0 .. (r - 1))
+column j m@(Matrix { r }) = fromMaybe (V.fromArray []) $ V.fromArray <$> traverse (\i -> index' i j m) (0 .. (r - 1))
 
 rows :: forall a. Matrix a -> Array (V.Vector a)
 rows (Matrix { m }) = V.fromArray <$> m
@@ -105,12 +105,12 @@ identity n = fromFunction n n \i j -> if i == j then one else zero
 -- | computes the transpose of the matrix
 -- | https://en.wikipedia.org/wiki/Transpose
 transpose :: forall a. Matrix a -> Matrix a
-transpose m@(Matrix { r, c }) = fromFunction c r \i j -> runFn3 unsafeElem m j i
+transpose m@(Matrix { r, c }) = fromFunction c r \i j -> runFn3 unsafeIndex m j i
 
 add :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
 add m1 m2
   | nrows m1 /= nrows m2 || ncols m1 /= ncols m2 = fromArray 0 0  []
-  | otherwise = fromFunction (nrows m1) (ncols m1) \i j -> elem i j m1 + elem i j m2
+  | otherwise = fromFunction (nrows m1) (ncols m1) \i j -> index i j m1 + index i j m2
 
 diff :: forall a. Ring a => Matrix a -> Matrix a -> Matrix a
 diff m1 m2 = add m1 (-one `scale` m2)
@@ -133,7 +133,7 @@ mult' m@(Matrix { r }) v = V.fromFunction r \i -> V.dot (row i m) v
 
 kronecker :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
 kronecker m@(Matrix {r, c}) m'@(Matrix {r: r', c: c'}) =
-  fromFunction (r * r') (c * c') \i j -> elem (i / r') (j / c') m * elem (i `mod` r') (j `mod` c') m'
+  fromFunction (r * r') (c * c') \i j -> index (i / r') (j / c') m * index (i `mod` r') (j `mod` c') m'
 
 
 mapRow :: forall a. Int -> (a -> a) -> Matrix a -> Matrix a
@@ -143,8 +143,8 @@ swapRows :: forall a. Semiring a => Int -> Int -> Matrix a -> Matrix a
 swapRows r1 r2 m = mapWithIndex fn m
   where
   fn i j x
-    | i == r1 = runFn3 unsafeElem m r2 j
-    | i == r2 = runFn3 unsafeElem m r1 j
+    | i == r1 = runFn3 unsafeIndex m r2 j
+    | i == r2 = runFn3 unsafeIndex m r1 j
     | otherwise = x
 
 -- | computes the reduced row echelon form of the matrix and compute its determinant if the matrix is square
@@ -154,17 +154,17 @@ gaussJordan m@(Matrix { r, c }) = { mat: res.mat, det: res.det }
   where
   res = foldl step { mat: m, pivot: 0, det: one } (0 .. (c - 1))
 
-  step { mat, pivot, det } j = case range pivot (r - 1) # find \i -> elem i j mat /= zero of
+  step { mat, pivot, det } j = case range pivot (r - 1) # find \i -> index i j mat /= zero of
     Nothing -> { mat, pivot, det: zero }
     Just k ->
       let
-        v = elem k j mat
+        v = index k j mat
         mat2 = mapRow k (_ / v) mat
         mat3 = swapRows k pivot mat2
         mat4 =
           mat3
             # mapWithIndex \i j' x ->
-                if i == pivot then x else x - (runFn3 unsafeElem mat3 i j) * (runFn3 unsafeElem mat3 pivot j')
+                if i == pivot then x else x - (runFn3 unsafeIndex mat3 i j) * (runFn3 unsafeIndex mat3 pivot j')
       in
         { mat: mat4
         , pivot: pivot + 1
@@ -179,7 +179,7 @@ augmentedMatrix :: forall a. Semiring a => Matrix a -> Matrix a
 augmentedMatrix m@(Matrix { r, c }) = fromFunction r (r + c) fAug
   where
   fAug i j
-    | j < c = elem i j m
+    | j < c = index i j m
     | i == j - c = one
     | otherwise = zero
 
@@ -190,8 +190,8 @@ inverse :: forall a. Eq a => Field a => Matrix a -> Maybe (Matrix a)
 
 inverse m@(Matrix { r, c })
   | r == c =
-    if elem (r - 1) (r - 1) echelon == one then
-      Just $ fromFunction r r \i j -> elem i (j + r) echelon
+    if index (r - 1) (r - 1) echelon == one then
+      Just $ fromFunction r r \i j -> index i (j + r) echelon
     else
       Nothing
     where
@@ -203,7 +203,7 @@ inverse _ = Nothing
 -- | https://en.wikipedia.org/wiki/Trace_(linear_algebra)
 trace :: forall a. Eq a => Semiring a => Matrix a -> a
 trace m@(Matrix { r, c })
-  | r == c = 0 .. (r - 1) # foldl (\acc i -> acc + elem i i m) zero
+  | r == c = 0 .. (r - 1) # foldl (\acc i -> acc + index i i m) zero
 
 trace _ = zero
 
@@ -222,8 +222,8 @@ imker :: forall a. Eq a => Field a => Matrix a -> { im :: Array (V.Vector a), ke
 imker m@(Matrix { r, c }) = { im, ker }
   where
   echelon = _.mat $ gaussJordan $ augmentedMatrix $ transpose m
-  a = fromFunction c r \i j -> elem i j echelon
-  b = fromFunction c c \i j -> elem i (j + r) echelon
+  a = fromFunction c r \i j -> index i j echelon
+  b = fromFunction c c \i j -> index i (j + r) echelon
   im = rows a # filter (not <<< V.null)
   ker = rows b # filterWithIndex \i _ -> V.null (row i a)
 
@@ -254,7 +254,7 @@ solveLinearSystem m b = { sol: _, basis: kernel m } <$> solveLinearSystem' m b
 solveLinearSystem' :: forall a. Eq a => Field a => Matrix a -> V.Vector a -> Maybe (V.Vector a)
 solveLinearSystem' m@(Matrix { r, c }) b =
   -- if the last non zero row contains is of the form 0 = 1 then there is no solution 
-  if r == 0 || (0 .. (c - 1) # all \j -> runFn3 unsafeElem echelon (r' - 1) j == zero) then
+  if r == 0 || (0 .. (c - 1) # all \j -> runFn3 unsafeIndex echelon (r' - 1) j == zero) then
     Nothing
   else
     let
@@ -263,16 +263,16 @@ solveLinearSystem' m@(Matrix { r, c }) b =
           <#> ( \i ->
                 -- k is the column of the leading one of the row i, k always exists
                 let
-                  k = fromMaybe 0 $ 0 .. (c - 1) # find \j -> runFn3 unsafeElem echelon i j == one
+                  k = fromMaybe 0 $ 0 .. (c - 1) # find \j -> runFn3 unsafeIndex echelon i j == one
                 in
-                  k /\ runFn3 unsafeElem echelon i c
+                  k /\ runFn3 unsafeIndex echelon i c
             )
 
       sol = V.fromArray $ updateAtIndices toBeUpdated (replicate c zero)
     in
       Just sol
   where
-  augmented = fromFunction r (c + 1) \i j -> if j == c then V.elem i b else elem i j m
+  augmented = fromFunction r (c + 1) \i j -> if j == c then V.index i b else index i j m
   echelon = removeZeroRows $ _.mat $ gaussJordan augmented
   r' = nrows echelon
 
