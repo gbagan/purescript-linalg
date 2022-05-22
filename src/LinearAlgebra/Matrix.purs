@@ -4,6 +4,7 @@ module LinearAlgebra.Matrix
   , fromArray
   , fromFunction
   , identity
+  , diag
   , mapWithIndex
   , toArray
   , ncols
@@ -99,8 +100,11 @@ columns = rows <<< transpose
 
 -- | computes the identity matrix of dimension nxn
 -- | https://en.wikipedia.org/wiki/Identity_matrix
-identity :: forall a. Field a => Int -> Matrix a
+identity :: forall a. Semiring a => Int -> Matrix a
 identity n = fromFunction n n \i j -> if i == j then one else zero
+
+diag :: forall a. Semiring a => Array a -> Matrix a
+diag v = fromFunction (length v) (length v) \i j -> if i == j then fromMaybe zero (v !! i) else zero
 
 -- | computes the transpose of the matrix
 -- | https://en.wikipedia.org/wiki/Transpose
