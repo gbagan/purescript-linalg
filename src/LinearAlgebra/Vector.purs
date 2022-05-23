@@ -38,11 +38,11 @@ fromFunction n f = Vector $ f <$> 0 .. (n - 1)
 
 -- | returns the element at index i
 -- | returns zero if the index are not valid
-index :: forall a. Semiring a => Int -> Vector a -> a
-index i v = fromMaybe zero $ index' i v
+index :: forall a. Semiring a => Vector a -> Int -> a
+index v i = fromMaybe zero $ index' v i
 
-index' :: forall a. Int -> Vector a -> Maybe a
-index' i (Vector m) = m !! i
+index' :: forall a. Vector a -> Int -> Maybe a
+index' (Vector m) i = m !! i
 
 -- | tests if the vector is null i.e. contains only zero values
 null :: forall a. Eq a => Semiring a => Vector a -> Boolean

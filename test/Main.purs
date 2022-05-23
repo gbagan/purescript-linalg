@@ -52,6 +52,10 @@ main = launchAff_ $ runSpec [consoleReporter] do
       let m7 = M.fromArray 3 2 [[1%1,2%1], [2%1, 4%1], [3%1, 6%1]]
       let m8 = M.fromArray 3 3 [[1%1, 1%1, 0%1], [0%1, 1%1, 1%1], [1%1, 2%1, 1%1]]
 
+      describe "constructors" do
+        it "fromColumns" do
+          M.fromColumns 3 3 (M.columns m5) `shouldEqual` m5
+
       describe "operations" do
         it "sum" do
           (m1 `M.add` m2) `shouldEqual` M.fromArray 2 4 [[6, 6, 3, 3], [5, 6, 1, -7]]

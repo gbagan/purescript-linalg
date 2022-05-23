@@ -3,7 +3,8 @@ module LinearAlgebra.Matrix
   , Solutions
   , fromArray
   , fromFunction
-  , identity
+  , fromColumns
+  , eye
   , diag
   , mapWithIndex
   , toArray
@@ -61,6 +62,9 @@ fromFunction r c f = Matrix { r, c, m: (0 .. (r - 1)) <#> \i -> (0 .. (c - 1)) <
 fromArray :: forall a. Semiring a => Int -> Int -> Array (Array a) -> Matrix a
 fromArray r c m = fromFunction r c \i j -> fromMaybe zero $ m !! i >>= (_ !! j) 
 
+fromColumns :: forall a. Semiring a => Int -> Int -> Array (V.Vector a) -> Matrix a
+fromColumns r c a = transpose $ fromArray c r (V.toArray <$> a)
+
 toArray :: forall a. Matrix a -> Array (Array a)
 toArray (Matrix { m }) = m
 
@@ -72,13 +76,13 @@ ncols (Matrix { c }) = c
 
 -- | returns the element at indices (i, j)
 -- | returns zero if the indices are not valid
-index :: forall a. Semiring a => Int -> Int -> Matrix a -> a
-index i j m = fromMaybe zero $ index' i j m
+index :: forall a. Semiring a => Matrix a -> Int ->Int -> a
+index m i j = fromMaybe zero $ index' m i j
 
 foreign import unsafeIndex :: forall a. Fn3 (Matrix a) Int Int a
 
-index' :: forall a. Int -> Int -> Matrix a -> Maybe a
-index' i j (Matrix { m }) = m !! i >>= (_ !! j)
+index' :: forall a. Matrix a -> Int -> Int -> Maybe a
+index' (Matrix { m }) i j = m !! i >>= (_ !! j)
 
 -- mapWithIndex is the bottleneck for many algorithms so it is implemented in javascript
 foreign import _mapWithIndex :: forall a b. Fn4 (Array (Array a)) Int Int (Int -> Int -> a -> b) (Array (Array b))
@@ -86,11 +90,11 @@ foreign import _mapWithIndex :: forall a b. Fn4 (Array (Array a)) Int Int (Int -
 mapWithIndex :: forall a b. (Int -> Int -> a -> b) -> Matrix a -> Matrix b
 mapWithIndex f (Matrix { r, c, m }) = Matrix { r, c, m: runFn4 _mapWithIndex m r c f }
 
-row :: forall a. Int -> Matrix a -> V.Vector a
-row i (Matrix { m }) = fromMaybe (V.fromArray []) $ V.fromArray <$> m !! i
+row :: forall a. Matrix a -> Int -> V.Vector a
+row (Matrix { m }) i = fromMaybe (V.fromArray []) $ V.fromArray <$> m !! i
 
-column :: forall a. Int -> Matrix a -> V.Vector a
-column j m@(Matrix { r }) = fromMaybe (V.fromArray []) $ V.fromArray <$> traverse (\i -> index' i j m) (0 .. (r - 1))
+column :: forall a. Matrix a -> Int -> V.Vector a
+column m@(Matrix { r }) j = fromMaybe (V.fromArray []) $ V.fromArray <$> traverse (\i -> index' m i j) (0 .. (r - 1))
 
 rows :: forall a. Matrix a -> Array (V.Vector a)
 rows (Matrix { m }) = V.fromArray <$> m
@@ -100,8 +104,8 @@ columns = rows <<< transpose
 
 -- | computes the identity matrix of dimension nxn
 -- | https://en.wikipedia.org/wiki/Identity_matrix
-identity :: forall a. Semiring a => Int -> Matrix a
-identity n = fromFunction n n \i j -> if i == j then one else zero
+eye :: forall a. Semiring a => Int -> Matrix a
+eye n = fromFunction n n \i j -> if i == j then one else zero
 
 diag :: forall a. Semiring a => Array a -> Matrix a
 diag v = fromFunction (length v) (length v) \i j -> if i == j then fromMaybe zero (v !! i) else zero
@@ -114,7 +118,7 @@ transpose m@(Matrix { r, c }) = fromFunction c r \i j -> runFn3 unsafeIndex m j 
 add :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
 add m1 m2
   | nrows m1 /= nrows m2 || ncols m1 /= ncols m2 = fromArray 0 0  []
-  | otherwise = fromFunction (nrows m1) (ncols m1) \i j -> index i j m1 + index i j m2
+  | otherwise = fromFunction (nrows m1) (ncols m1) \i j -> index m1 i j + index m2 i j
 
 diff :: forall a. Ring a => Matrix a -> Matrix a -> Matrix a
 diff m1 m2 = add m1 (-one `scale` m2)
@@ -126,18 +130,18 @@ scale x = map (x * _)
 
 mult :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
 mult m1@(Matrix { r: r1, c: c1 }) m2@(Matrix { r: r2, c: c2 })
-  | c1 == r2 = fromFunction r1 c2 \i j -> V.dot (row i m1) (column j m2)
+  | c1 == r2 = fromFunction r1 c2 \i j -> V.dot (row m1 i) (column m2 j)
 mult _ _ = invalid
 
 mult' :: forall a. Semiring a => Matrix a -> V.Vector a -> V.Vector a
-mult' m@(Matrix { r }) v = V.fromFunction r \i -> V.dot (row i m) v
+mult' m@(Matrix { r }) v = V.fromFunction r \i -> V.dot (row m i) v
 
 -- | Kronecker product
 -- | https://en.wikipedia.org/wiki/Kronecker_product
 
 kronecker :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
 kronecker m@(Matrix {r, c}) m'@(Matrix {r: r', c: c'}) =
-  fromFunction (r * r') (c * c') \i j -> index (i / r') (j / c') m * index (i `mod` r') (j `mod` c') m'
+  fromFunction (r * r') (c * c') \i j -> index m (i / r') (j / c') * index m' (i `mod` r') (j `mod` c')
 
 
 mapRow :: forall a. Int -> (a -> a) -> Matrix a -> Matrix a
@@ -158,11 +162,11 @@ gaussJordan m@(Matrix { r, c }) = { mat: res.mat, det: res.det }
   where
   res = foldl step { mat: m, pivot: 0, det: one } (0 .. (c - 1))
 
-  step { mat, pivot, det } j = case range pivot (r - 1) # find \i -> index i j mat /= zero of
+  step { mat, pivot, det } j = case range pivot (r - 1) # find \i -> index mat i j /= zero of
     Nothing -> { mat, pivot, det: zero }
     Just k ->
       let
-        v = index k j mat
+        v = index mat k j
         mat2 = mapRow k (_ / v) mat
         mat3 = swapRows k pivot mat2
         mat4 =
@@ -183,7 +187,7 @@ augmentedMatrix :: forall a. Semiring a => Matrix a -> Matrix a
 augmentedMatrix m@(Matrix { r, c }) = fromFunction r (r + c) fAug
   where
   fAug i j
-    | j < c = index i j m
+    | j < c = index m i j
     | i == j - c = one
     | otherwise = zero
 
@@ -194,8 +198,8 @@ inverse :: forall a. Eq a => Field a => Matrix a -> Maybe (Matrix a)
 
 inverse m@(Matrix { r, c })
   | r == c =
-    if index (r - 1) (r - 1) echelon == one then
-      Just $ fromFunction r r \i j -> index i (j + r) echelon
+    if index echelon (r - 1) (r - 1) == one then
+      Just $ fromFunction r r \i j -> index echelon i (j + r)
     else
       Nothing
     where
@@ -207,7 +211,7 @@ inverse _ = Nothing
 -- | https://en.wikipedia.org/wiki/Trace_(linear_algebra)
 trace :: forall a. Eq a => Semiring a => Matrix a -> a
 trace m@(Matrix { r, c })
-  | r == c = 0 .. (r - 1) # foldl (\acc i -> acc + index i i m) zero
+  | r == c = 0 .. (r - 1) # foldl (\acc i -> acc + index m i i) zero
 
 trace _ = zero
 
@@ -226,10 +230,10 @@ imker :: forall a. Eq a => Field a => Matrix a -> { im :: Array (V.Vector a), ke
 imker m@(Matrix { r, c }) = { im, ker }
   where
   echelon = _.mat $ gaussJordan $ augmentedMatrix $ transpose m
-  a = fromFunction c r \i j -> index i j echelon
-  b = fromFunction c c \i j -> index i (j + r) echelon
+  a = fromFunction c r \i j -> index echelon i j
+  b = fromFunction c c \i j -> index echelon i (j + r)
   im = rows a # filter (not <<< V.null)
-  ker = rows b # filterWithIndex \i _ -> V.null (row i a)
+  ker = rows b # filterWithIndex \i _ -> V.null (row a i)
 
 -- | computes a basis the image (or column space) of the matrix
 -- | https://en.wikipedia.org/wiki/Row_and_column_spaces
@@ -276,7 +280,7 @@ solveLinearSystem' m@(Matrix { r, c }) b =
     in
       Just sol
   where
-  augmented = fromFunction r (c + 1) \i j -> if j == c then V.index i b else index i j m
+  augmented = fromFunction r (c + 1) \i j -> if j == c then V.index b i else index m i j
   echelon = removeZeroRows $ _.mat $ gaussJordan augmented
   r' = nrows echelon
 
