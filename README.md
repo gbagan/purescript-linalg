@@ -49,8 +49,8 @@ module Main where
 import Prelude
 import Effect.Console (logShow)
 import Data.Rational ((%))
-import LinearAlgebra.Vector as V
-import LinearAlgebra.Matrix as M
+import Data.LinearAlgebra.Vector as V
+import Data.LinearAlgebra.Matrix as M
 
 main = do
   let m = M.fromArray 3 4 [ [1%1, 2%1, 0%1, 0%1]
