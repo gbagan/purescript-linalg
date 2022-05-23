@@ -7,8 +7,8 @@ import Data.Maybe (Maybe(..))
 import Data.Rational ((%))
 import Effect (Effect)
 import Effect.Aff (launchAff_)
-import LinearAlgebra.Matrix as M
-import LinearAlgebra.Vector as V
+import Data.LinearAlgebra.Matrix as M
+import Data.LinearAlgebra.Vector as V
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)
@@ -30,7 +30,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         it "difference" do
           (v1 `V.diff` v2) `shouldEqual` V.fromArray [-1, -1, 1, -1]
         it "scalar multiplication" do
-          (2 `V.smult` v1) `shouldEqual` V.fromArray [4, 6, 2, 0]
+          (2 `V.scale` v1) `shouldEqual` V.fromArray [4, 6, 2, 0]
         it "dot product" do
           (v1 `V.dot` v2) `shouldEqual` 18
         it "colinear" do

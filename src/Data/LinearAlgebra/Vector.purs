@@ -1,4 +1,4 @@
-module LinearAlgebra.Vector
+module Data.LinearAlgebra.Vector
   ( Vector
   , fromArray
   , toArray
@@ -9,7 +9,7 @@ module LinearAlgebra.Vector
   , add
   , diff
   , dot
-  , smult
+  , scale
   , opposite
   , colinear
   ) where
@@ -52,7 +52,7 @@ add :: forall a. Semiring a => Vector a -> Vector a -> Vector a
 add (Vector v1) (Vector v2) = Vector $ zipWith (+) v1 v2
 
 diff :: forall a. Ring a => Vector a -> Vector a -> Vector a
-diff v1 v2 = v1 `add` (-one `smult` v2)
+diff v1 v2 = v1 `add` (-one `scale` v2)
 
 -- | dot product between two vectors.
 -- | https://en.wikipedia.org/wiki/Dot_product
@@ -60,8 +60,8 @@ dot :: forall a. Semiring a => Vector a -> Vector a -> a
 dot (Vector v1) (Vector v2) = foldl (+) zero $ zipWith (*) v1 v2
 
 -- | scalar multiplication
-smult :: forall a. Semiring a => a -> Vector a -> Vector a
-smult a (Vector v) = Vector $ map (a * _) v
+scale :: forall a. Semiring a => a -> Vector a -> Vector a
+scale a (Vector v) = Vector $ map (a * _) v
 
 opposite :: forall a. Ring a => Vector a -> Vector a
 opposite (Vector v) = Vector $ map (zero - _) v
