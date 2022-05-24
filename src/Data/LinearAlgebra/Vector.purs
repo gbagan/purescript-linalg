@@ -6,6 +6,7 @@ module Data.LinearAlgebra.Vector
   , null
   , index
   , index'
+  , mapWithIndex
   , add
   , diff
   , dot
@@ -16,6 +17,7 @@ module Data.LinearAlgebra.Vector
 
 import Prelude hiding (add)
 import Data.Array ((..), (!!), all, foldl, length, zipWith, uncons)
+import Data.Array as Array
 import Data.Maybe (Maybe(..), fromMaybe)
 
 newtype Vector a
@@ -43,6 +45,9 @@ index v i = fromMaybe zero $ index' v i
 
 index' :: forall a. Vector a -> Int -> Maybe a
 index' (Vector m) i = m !! i
+
+mapWithIndex :: forall a b. (Int -> a -> b) -> Vector a -> Vector b
+mapWithIndex f = fromArray <<< Array.mapWithIndex f <<< toArray
 
 -- | tests if the vector is null i.e. contains only zero values
 null :: forall a. Eq a => Semiring a => Vector a -> Boolean

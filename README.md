@@ -49,15 +49,15 @@ module Main where
 import Prelude
 import Effect.Console (logShow)
 import Data.Rational ((%))
-import LinearAlgebra.Vector as V
-import LinearAlgebra.Matrix as M
+import Data.LinearAlgebra.Vector as V
+import Data.LinearAlgebra.Matrix as M
 
 main = do
-  let m = M.fromArray 3 4 [ [1%1, 2%1, 0%1, 0%1]
-                          , [0%1, 3%1, 4%1, 0%1]
-                          , [0%1, 0%1, 5%1, 6%1]
-                          ]
-  let b = V.fromArray [7%1, 8%1, 9%1]
+  let m = M.fromArray 3 4 [ [1, 2, 0, 0]
+                          , [0, 3, 4, 0]
+                          , [0, 0, 5, 6]
+                          ] <#> (_ % 1)
+  let b = V.fromArray [7, 8, 9] <#> (_ % 1)
   logShow $ M.solveLinearSystem m b
 ```
 
