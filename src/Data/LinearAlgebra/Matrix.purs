@@ -11,7 +11,9 @@ module Data.LinearAlgebra.Matrix
   , ncols
   , nrows
   , column
+  , row
   , columns
+  , rows
   , index
   , index'
   , add
