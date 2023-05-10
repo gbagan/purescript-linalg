@@ -1,4 +1,4 @@
-module Data.LinearAlgebra.Matrix
+module LinearAlgebra.Matrix
   ( Matrix  
   , Solutions
   , fromArray
@@ -41,7 +41,7 @@ import Data.Function.Uncurried (Fn3, Fn4, mkFn3, runFn3, runFn4)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (traverse)
 import Data.Tuple.Nested ((/\))
-import Data.LinearAlgebra.Vector as V
+import LinearAlgebra.Vector as V
 
 newtype Matrix a
   = Matrix { r :: Int, c :: Int, m :: Array (Array a) }

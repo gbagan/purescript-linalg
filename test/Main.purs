@@ -7,8 +7,8 @@ import Data.Maybe (Maybe(..))
 import Data.Rational ((%))
 import Effect (Effect)
 import Effect.Aff (launchAff_)
-import Data.LinearAlgebra.Matrix as M
-import Data.LinearAlgebra.Vector as V
+import LinearAlgebra.Matrix as M
+import LinearAlgebra.Vector as V
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)

@@ -1,4 +1,4 @@
-module Data.LinearAlgebra.Vector
+module LinearAlgebra.Vector
   ( Vector
   , fromArray
   , toArray
