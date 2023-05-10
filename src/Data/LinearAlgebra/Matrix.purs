@@ -35,7 +35,7 @@ module Data.LinearAlgebra.Matrix
 import Prelude hiding (add)
 import Data.Array ((..), (!!), all, any, filter, find, foldl, length, replicate, updateAtIndices, zipWith)
 import Data.Array as Array
-import Data.Function.Uncurried (Fn3, Fn4, runFn3, runFn4)
+import Data.Function.Uncurried (Fn3, Fn4, mkFn3, runFn3, runFn4)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (traverse)
 import Data.Tuple.Nested ((/\))
@@ -79,16 +79,19 @@ ncols (Matrix { c }) = c
 index :: forall a. Semiring a => Matrix a -> Int ->Int -> a
 index m i j = fromMaybe zero $ index' m i j
 
-foreign import unsafeIndex :: forall a. Fn3 (Matrix a) Int Int a
+foreign import _index :: forall a. Fn3 (Matrix a) Int Int a
 
 index' :: forall a. Matrix a -> Int -> Int -> Maybe a
 index' (Matrix { m }) i j = m !! i >>= (_ !! j)
 
 -- mapWithIndex is the bottleneck for many algorithms so it is implemented in javascript
-foreign import _mapWithIndex :: forall a b. Fn4 (Array (Array a)) Int Int (Int -> Int -> a -> b) (Array (Array b))
+foreign import mapWithIndexImpl :: forall a b. Fn4 (Array (Array a)) Int Int (Fn3 Int Int a b) (Array (Array b))
 
 mapWithIndex :: forall a b. (Int -> Int -> a -> b) -> Matrix a -> Matrix b
-mapWithIndex f (Matrix { r, c, m }) = Matrix { r, c, m: runFn4 _mapWithIndex m r c f }
+mapWithIndex f (Matrix { r, c, m }) = Matrix { r, c, m: runFn4 mapWithIndexImpl m r c (mkFn3 f) }
+
+_mapWithIndex :: forall a b. (Fn3 Int Int a b) -> Matrix a -> Matrix b
+_mapWithIndex f (Matrix { r, c, m }) = Matrix { r, c, m: runFn4 mapWithIndexImpl m r c f }
 
 row :: forall a. Matrix a -> Int -> V.Vector a
 row (Matrix { m }) i = fromMaybe (V.fromArray []) $ V.fromArray <$> m !! i
@@ -113,7 +116,7 @@ diag v = fromFunction (length v) (length v) \i j -> if i == j then fromMaybe zer
 -- | computes the transpose of the matrix
 -- | https://en.wikipedia.org/wiki/Transpose
 transpose :: forall a. Matrix a -> Matrix a
-transpose m@(Matrix { r, c }) = fromFunction c r \i j -> runFn3 unsafeIndex m j i
+transpose m@(Matrix { r, c }) = fromFunction c r \i j -> runFn3 _index m j i
 
 add :: forall a. Semiring a => Matrix a -> Matrix a -> Matrix a
 add m1 m2
@@ -145,15 +148,15 @@ kronecker m@(Matrix {r, c}) m'@(Matrix {r: r', c: c'}) =
 
 
 mapRow :: forall a. Int -> (a -> a) -> Matrix a -> Matrix a
-mapRow k f = mapWithIndex \i _ x -> if i == k then f x else x
+mapRow k f m = _mapWithIndex (mkFn3 \i _ x -> if i == k then f x else x) m
 
 swapRows :: forall a. Semiring a => Int -> Int -> Matrix a -> Matrix a
-swapRows r1 r2 m = mapWithIndex fn m
+swapRows r1 r2 m = _mapWithIndex fn m
   where
-  fn i j x
-    | i == r1 = runFn3 unsafeIndex m r2 j
-    | i == r2 = runFn3 unsafeIndex m r1 j
-    | otherwise = x
+  fn = mkFn3 \i j x ->
+    if i == r1 then runFn3 _index m r2 j
+    else if i == r2 then runFn3 _index m r1 j
+    else x
 
 -- | computes the reduced row echelon form of the matrix and compute its determinant if the matrix is square
 -- | see https://en.wikipedia.org/wiki/Row_echelon_form 
@@ -171,8 +174,9 @@ gaussJordan m@(Matrix { r, c }) = { mat: res.mat, det: res.det }
         mat3 = swapRows k pivot mat2
         mat4 =
           mat3
-            # mapWithIndex \i j' x ->
-                if i == pivot then x else x - (runFn3 unsafeIndex mat3 i j) * (runFn3 unsafeIndex mat3 pivot j')
+            # _mapWithIndex (mkFn3 \i j' x ->
+                if i == pivot then x else x - (runFn3 _index mat3 i j) * (runFn3 _index mat3 pivot j')
+            )
       in
         { mat: mat4
         , pivot: pivot + 1
@@ -262,7 +266,7 @@ solveLinearSystem m b = { sol: _, basis: kernel m } <$> solveLinearSystem' m b
 solveLinearSystem' :: forall a. Eq a => Field a => Matrix a -> V.Vector a -> Maybe (V.Vector a)
 solveLinearSystem' m@(Matrix { r, c }) b =
   -- if the last non zero row contains is of the form 0 = 1 then there is no solution 
-  if r == 0 || (0 .. (c - 1) # all \j -> runFn3 unsafeIndex echelon (r' - 1) j == zero) then
+  if r == 0 || (0 .. (c - 1) # all \j -> runFn3 _index echelon (r' - 1) j == zero) then
     Nothing
   else
     let
@@ -271,9 +275,9 @@ solveLinearSystem' m@(Matrix { r, c }) b =
           <#> ( \i ->
                 -- k is the column of the leading one of the row i, k always exists
                 let
-                  k = fromMaybe 0 $ 0 .. (c - 1) # find \j -> runFn3 unsafeIndex echelon i j == one
+                  k = fromMaybe 0 $ 0 .. (c - 1) # find \j -> runFn3 _index echelon i j == one
                 in
-                  k /\ runFn3 unsafeIndex echelon i c
+                  k /\ runFn3 _index echelon i c
             )
 
       sol = V.fromArray $ updateAtIndices toBeUpdated (replicate c zero)
@@ -285,8 +289,5 @@ solveLinearSystem' m@(Matrix { r, c }) b =
   r' = nrows echelon
 
 removeZeroRows :: forall a. Eq a => Semiring a => Matrix a -> Matrix a
-removeZeroRows (Matrix { c, m }) =
-  let
-    m' = filter (any (_ /= zero)) m
-  in
-    Matrix { r: Array.length m', c, m: m' }
+removeZeroRows (Matrix { c, m }) = Matrix { r: Array.length m', c, m: m' }
+  where m' = filter (any (_ /= zero)) m

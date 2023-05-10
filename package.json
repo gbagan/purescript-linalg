@@ -6,9 +6,9 @@
         "test": "spago -x test.dhall test"
     },
     "devDependencies": {
-        "purescript": "^0.15.0",
+        "purescript": "^0.15.9",
         "purescript-psa": "^0.8.2",
-        "rimraf": "^3.0.2",
-        "spago": "^0.20.9"
+        "rimraf": "^5.0.0",
+        "spago": "^0.21.0"
     }
 }
