@@ -7,3 +7,4 @@ package-lock.json
 .psc-ide-port
 bower_components
 generated-docs/
+/spago.lock

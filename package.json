@@ -1,14 +1,14 @@
 {
     "private": true,
     "scripts": {
-        "clean": "rimraf output && rimraf .pulp-cache",
-        "build": "spago build --purs-args '--censor-lib --strict'",
-        "test": "spago -x test.dhall test"
+        "clean": "rimraf output && rimraf .spago",
+        "build": "spago build",
+        "test": "spago test"
     },
     "devDependencies": {
         "purescript": "^0.15.9",
         "purescript-psa": "^0.8.2",
         "rimraf": "^5.0.0",
-        "spago": "^0.21.0"
+        "spago": "1.0.5"
     }
 }
